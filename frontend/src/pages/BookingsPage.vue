@@ -279,14 +279,16 @@ async function submit() {
     submitError.value = "请选择出行日期";
     return;
   }
+  const savedCalendarId = selectedCalendarId.value;
+  const savedTravelDate = form.travel_date;
   try {
     emit("booking-created", { ...form });
     form.contact_name = "";
     form.phone = "";
     form.party_size = 1;
-    form.travel_date = "";
     form.remark = "";
-    selectedCalendarId.value = null;
+    selectedCalendarId.value = savedCalendarId;
+    form.travel_date = savedTravelDate;
   } catch (err) {
     submitError.value = err.message || "提交失败，请重试";
   }
