@@ -1,3 +1,4 @@
+from django.utils import timezone
 from rest_framework import serializers
 
 from .models import Booking
@@ -10,6 +11,12 @@ class BookingSerializer(serializers.ModelSerializer):
     group_enrolled = serializers.IntegerField(source="route.enrolled_count", read_only=True)
     min_group_size = serializers.IntegerField(source="route.min_group_size", read_only=True)
     group_progress = serializers.IntegerField(source="route.group_progress", read_only=True)
+    travel_base_cost = serializers.DecimalField(
+        max_digits=10, decimal_places=2, read_only=True
+    )
+    travel_inventory = serializers.IntegerField(read_only=True)
+    travel_remaining = serializers.IntegerField(read_only=True)
+    registration_deadline = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = Booking
@@ -28,5 +35,54 @@ class BookingSerializer(serializers.ModelSerializer):
             "group_enrolled",
             "min_group_size",
             "group_progress",
+            "travel_base_cost",
+            "travel_inventory",
+            "travel_remaining",
+            "registration_deadline",
             "created_at",
         ]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        price_calendar = instance.route.price_calendar.filter(
+            travel_date=instance.travel_date
+        ).first()
+        if price_calendar:
+            data["travel_base_cost"] = price_calendar.base_cost
+            data["travel_inventory"] = price_calendar.inventory
+            data["travel_remaining"] = price_calendar.remaining_inventory
+            data["registration_deadline"] = price_calendar.registration_deadline
+        else:
+            data["travel_base_cost"] = instance.route.base_cost
+            data["travel_inventory"] = instance.route.max_group_size
+            data["travel_remaining"] = instance.route.max_group_size - instance.route.enrolled_count
+            data["registration_deadline"] = None
+        return data
+
+    def validate(self, attrs):
+        route = attrs.get("route")
+        travel_date = attrs.get("travel_date")
+        party_size = attrs.get("party_size", 1)
+
+        price_calendar = route.price_calendar.filter(
+            travel_date=travel_date
+        ).first()
+
+        if price_calendar:
+            if price_calendar.registration_deadline and timezone.now() > price_calendar.registration_deadline:
+                raise serializers.ValidationError(
+                    {"travel_date": "该出行日期的报名已截止"}
+                )
+
+            if price_calendar.remaining_inventory < party_size:
+                raise serializers.ValidationError(
+                    {"party_size": f"库存不足，剩余名额为 {price_calendar.remaining_inventory}"}
+                )
+        else:
+            remaining = route.max_group_size - route.enrolled_count
+            if remaining < party_size:
+                raise serializers.ValidationError(
+                    {"party_size": f"名额不足，剩余名额为 {remaining}"}
+                )
+
+        return attrs

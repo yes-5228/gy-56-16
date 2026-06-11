@@ -7,7 +7,7 @@ from django.utils import timezone
 from apps.attractions.models import Attraction
 from apps.bookings.models import Booking
 from apps.notifications.models import TravelNotice
-from apps.routes.models import RouteStop, TravelRoute
+from apps.routes.models import PriceCalendar, RouteStop, TravelRoute
 
 
 class Command(BaseCommand):
@@ -88,6 +88,27 @@ class Command(BaseCommand):
                 day=stop[1],
                 order=stop[2],
                 note=stop[3],
+            )
+
+        route.price_calendar.all().delete()
+        for offset, cost, inventory in [
+            (7, Decimal("1080"), 15),
+            (14, Decimal("980"), 18),
+            (21, Decimal("920"), 20),
+            (30, Decimal("880"), 20),
+        ]:
+            travel_date = date.today() + timedelta(days=offset)
+            PriceCalendar.objects.create(
+                route=route,
+                travel_date=travel_date,
+                base_cost=cost,
+                inventory=inventory,
+                registration_deadline=timezone.make_aware(
+                    timezone.datetime.combine(
+                        travel_date - timedelta(days=2),
+                        timezone.datetime.min.time().replace(hour=18),
+                    )
+                ),
             )
 
         Booking.objects.update_or_create(

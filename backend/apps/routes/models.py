@@ -62,3 +62,31 @@ class RouteStop(models.Model):
 
     def __str__(self):
         return f"{self.route.title} D{self.day}-{self.order}"
+
+
+class PriceCalendar(models.Model):
+    route = models.ForeignKey(TravelRoute, related_name="price_calendar", on_delete=models.CASCADE)
+    travel_date = models.DateField("出行日期")
+    base_cost = models.DecimalField("基础费用", max_digits=10, decimal_places=2)
+    inventory = models.PositiveIntegerField("库存（可报名人数）", default=0)
+    registration_deadline = models.DateTimeField("报名截止时间", blank=True, null=True)
+
+    class Meta:
+        ordering = ["travel_date"]
+        unique_together = ("route", "travel_date")
+
+    def __str__(self):
+        return f"{self.route.title} - {self.travel_date}"
+
+    @property
+    def enrolled_count(self):
+        return sum(
+            booking.party_size
+            for booking in self.route.bookings.filter(
+                travel_date=self.travel_date
+            ).exclude(status="cancelled")
+        )
+
+    @property
+    def remaining_inventory(self):
+        return max(self.inventory - self.enrolled_count, 0)

@@ -8,7 +8,9 @@ class BookingViewSet(viewsets.ModelViewSet):
     serializer_class = BookingSerializer
 
     def get_queryset(self):
-        queryset = Booking.objects.select_related("route").all()
+        queryset = Booking.objects.select_related("route").prefetch_related(
+            "route__price_calendar"
+        ).all()
         route_id = self.request.query_params.get("route")
         status = self.request.query_params.get("status")
         if route_id:
