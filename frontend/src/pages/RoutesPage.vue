@@ -96,7 +96,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
+import { computed, reactive, ref } from "vue";
 import MetricCard from "../components/MetricCard.vue";
 import RouteCard from "../components/RouteCard.vue";
 
@@ -106,7 +106,12 @@ const props = defineProps({
 });
 
 const selectedRoute = ref(null);
-const selectedDateId = ref(null);
+const selectedDateMap = reactive({});
+
+const selectedDateId = computed(() => {
+  if (!selectedRoute.value) return null;
+  return selectedDateMap[selectedRoute.value.id] || null;
+});
 
 const formingCount = computed(() => props.routes.filter((route) => route.status === "forming").length);
 const averageBudget = computed(() => {
@@ -141,6 +146,12 @@ const currentPricing = computed(() => {
   };
 });
 
+const selectedDateDeadline = computed(() => {
+  const selected = selectedCalendar.value.find((item) => item.id === selectedDateId.value);
+  if (!selected) return null;
+  return selected.registration_deadline;
+});
+
 const selectedDateStock = computed(() => {
   const selected = selectedCalendar.value.find((item) => item.id === selectedDateId.value);
   if (!selected) return null;
@@ -149,16 +160,24 @@ const selectedDateStock = computed(() => {
 
 function openDetail(route) {
   selectedRoute.value = route;
-  selectedDateId.value = null;
-  const firstAvailable = selectedCalendar.value.find((item) => !isExpired(item));
+  const savedId = selectedDateMap[route.id];
+  const savedItem = selectedCalendar.value.find((item) => item.id === savedId);
+  if (savedItem && !isExpired(savedItem) && savedItem.remaining_inventory > 0) {
+    return;
+  }
+  const firstAvailable = selectedCalendar.value.find(
+    (item) => !isExpired(item) && item.remaining_inventory > 0
+  );
   if (firstAvailable) {
-    selectedDateId.value = firstAvailable.id;
+    selectedDateMap[route.id] = firstAvailable.id;
   }
 }
 
 function selectDate(item) {
-  if (!isExpired(item)) {
-    selectedDateId.value = item.id;
+  if (!isExpired(item) && item.remaining_inventory > 0) {
+    if (selectedRoute.value) {
+      selectedDateMap[selectedRoute.value.id] = item.id;
+    }
   }
 }
 

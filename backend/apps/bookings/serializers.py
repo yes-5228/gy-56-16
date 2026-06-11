@@ -17,6 +17,8 @@ class BookingSerializer(serializers.ModelSerializer):
     travel_inventory = serializers.IntegerField(read_only=True)
     travel_remaining = serializers.IntegerField(read_only=True)
     registration_deadline = serializers.DateTimeField(read_only=True)
+    date_enrolled = serializers.IntegerField(read_only=True)
+    date_progress = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Booking
@@ -39,13 +41,26 @@ class BookingSerializer(serializers.ModelSerializer):
             "travel_inventory",
             "travel_remaining",
             "registration_deadline",
+            "date_enrolled",
+            "date_progress",
             "created_at",
         ]
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        price_calendar = instance.route.price_calendar.filter(
-            travel_date=instance.travel_date
+        route = instance.route
+        travel_date = instance.travel_date
+        min_size = route.min_group_size
+
+        date_enrolled = sum(
+            booking.party_size
+            for booking in route.bookings.filter(travel_date=travel_date)
+            .exclude(status="cancelled")
+        )
+        date_progress = min(round(date_enrolled / min_size * 100), 100) if min_size > 0 else 100
+
+        price_calendar = route.price_calendar.filter(
+            travel_date=travel_date
         ).first()
         if price_calendar:
             data["travel_base_cost"] = price_calendar.base_cost
@@ -53,10 +68,13 @@ class BookingSerializer(serializers.ModelSerializer):
             data["travel_remaining"] = price_calendar.remaining_inventory
             data["registration_deadline"] = price_calendar.registration_deadline
         else:
-            data["travel_base_cost"] = instance.route.base_cost
-            data["travel_inventory"] = instance.route.max_group_size
-            data["travel_remaining"] = instance.route.max_group_size - instance.route.enrolled_count
+            data["travel_base_cost"] = route.base_cost
+            data["travel_inventory"] = route.max_group_size
+            data["travel_remaining"] = route.max_group_size - route.enrolled_count
             data["registration_deadline"] = None
+
+        data["date_enrolled"] = date_enrolled
+        data["date_progress"] = date_progress
         return data
 
     def validate(self, attrs):

@@ -14,6 +14,7 @@ class RouteStopSerializer(serializers.ModelSerializer):
 
 
 class PriceCalendarSerializer(serializers.ModelSerializer):
+    route_id = serializers.IntegerField(source="route.id", read_only=True)
     enrolled_count = serializers.IntegerField(read_only=True)
     remaining_inventory = serializers.IntegerField(read_only=True)
 
@@ -21,6 +22,7 @@ class PriceCalendarSerializer(serializers.ModelSerializer):
         model = PriceCalendar
         fields = [
             "id",
+            "route_id",
             "travel_date",
             "base_cost",
             "inventory",

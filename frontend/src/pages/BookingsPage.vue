@@ -132,7 +132,13 @@
             </p>
           </div>
           <span class="tag">{{ booking.status_label }}</span>
-          <strong>{{ booking.group_enrolled }}/{{ booking.min_group_size }}</strong>
+          <div class="booking-progress">
+            <strong>{{ booking.date_enrolled }}/{{ booking.min_group_size }}</strong>
+            <div class="progress-track small">
+              <i :style="{ width: `${booking.date_progress}%` }"></i>
+            </div>
+            <p class="progress-label">该日成团进度</p>
+          </div>
         </article>
       </div>
     </section>
@@ -430,6 +436,34 @@ async function submit() {
   font-size: 12px;
   color: #0f766e;
   font-weight: 600;
+}
+.booking-progress {
+  display: grid;
+  gap: 4px;
+  text-align: right;
+  min-width: 110px;
+}
+.booking-progress strong {
+  font-size: 15px;
+  color: #17202a;
+}
+.progress-track.small {
+  height: 6px;
+  border-radius: 3px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+.progress-track.small i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #14b8a6, #0f766e);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+.progress-label {
+  margin: 0;
+  font-size: 11px;
+  color: #94a3b8;
 }
 button:disabled {
   opacity: 0.6;
