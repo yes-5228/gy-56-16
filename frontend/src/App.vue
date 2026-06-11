@@ -35,6 +35,7 @@
         :is="activeComponent"
         :attractions="attractions"
         :routes="routes"
+        :priceCalendar="priceCalendar"
         :bookings="bookings"
         :notices="notices"
         @booking-created="handleBookingCreated"
@@ -70,6 +71,7 @@ const loading = ref(true);
 const error = ref("");
 const attractions = ref([]);
 const routes = ref([]);
+const priceCalendar = ref([]);
 const bookings = ref([]);
 const notices = ref([]);
 
@@ -80,14 +82,16 @@ async function loadData() {
   loading.value = true;
   error.value = "";
   try {
-    const [attractionData, routeData, bookingData, noticeData] = await Promise.all([
+    const [attractionData, routeData, calendarData, bookingData, noticeData] = await Promise.all([
       travelApi.getAttractions(),
       travelApi.getRoutes(),
+      travelApi.getPriceCalendarList(),
       travelApi.getBookings(),
       travelApi.getNotices(),
     ]);
     attractions.value = attractionData;
     routes.value = routeData;
+    priceCalendar.value = calendarData;
     bookings.value = bookingData;
     notices.value = noticeData;
   } catch (err) {
